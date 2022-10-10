@@ -1,5 +1,7 @@
 import argparse
 import os
+
+import numpy as np
 import tqdm
 import torch
 from sklearn.metrics import accuracy_score
@@ -7,6 +9,8 @@ from sklearn.metrics import accuracy_score
 from eval_utils import downstream_validation
 import utils
 import data_utils
+
+from torch.utils.data import TensorDataset
 
 
 def setup_dataloader(args):
@@ -45,9 +49,50 @@ def setup_dataloader(args):
     # dataloaders.
     # ===================================================== #
 
-    train_loader = None
-    val_loader = None
+    # I assume encoded_sentences are the sentences... encoded
+    bigTable = list()
+    for s in encoded_sentences:  # for each sample sentence
+        for curr in range(len(s)):  # for each index in the sentence
+            for i in range(-2, 3):  # FIXME my window is 2 before and 2 behind
+                if (curr + i in range(len(s))) and i != 0:  # in bounds and not the current word:
+                    temp = (s[curr], s[curr + i])  # a tuple of current word and context word
+                    bigTable.append(temp)
+    # once out here, bigTable has been made for everything.... time to break into training and validation
+
+    # splitting into train and validation
+    train_encoded = list()
+    train_out = list()
+    val_encoded = list()
+    val_out = list()
+
+    val_indices = np.random.choice(list(range(len(bigTable))), int(len(bigTable) * .2 + .5), replace=False)
+    for i in range(len(bigTable)):
+        if i in val_indices:  # should be validation
+            val_encoded.append(bigTable[i][0])
+            val_out.append(bigTable[i][1])
+        else:  # should be in training
+            train_encoded.append(bigTable[i][0])
+            train_out.append(bigTable[i][1])
+
+    # train_dataset = TensorDataset(torch.from_numpy(train_np_x))
+
+        # # Build tokenizer based on training data.
+        # vocab_to_index, index_to_vocab, len_cutoff, cpb = build_tokenizer_table(train_lines, voc_k)
+        #
+        # # Encode the training and validation set inputs/outputs.
+        # train_np_x = encode_data(train_lines, vocab_to_index, len_cutoff)
+        # train_dataset = TensorDataset(torch.from_numpy(train_np_x))
+        # val_np_x = encode_data(val_lines, vocab_to_index, len_cutoff)
+        # val_dataset = TensorDataset(torch.from_numpy(val_np_x))
+        #
+        # # Create data loaders
+    trainDS = torch.utils.data.TensorDataset(torch.from_numpy(train_encoded), torch.from_numpy(train_out))
+    valDS = torch.utils.data.TensorDataset(torch.from_numpy(val_encoded), torch.from_numpy(val_out))
+    train_loader = torch.utils.data.DataLoader(trainDS, shuffle=True, batch_size=args.batch_size)  # FIXME
+    val_loader = torch.utils.data.DataLoader(valDS, shuffle=True, batch_size=args.batch_size)
+
     return train_loader, val_loader
+
 
 
 def setup_model(args):
