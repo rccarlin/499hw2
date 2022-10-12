@@ -1,6 +1,7 @@
 import argparse
 import os
 
+import numpy
 import numpy as np
 import tqdm
 import torch
@@ -13,6 +14,7 @@ import data_utils
 from torch.utils.data import TensorDataset
 
 import model as md
+import random
 
 
 def setup_dataloader(args):
@@ -52,31 +54,50 @@ def setup_dataloader(args):
     # ===================================================== #
 
     # I assume encoded_sentences are the sentences... encoded
-    bigTable = list()
-    for s in encoded_sentences:  # for each sample sentence
-        for curr in range(len(s)):  # for each index in the sentence
-            for i in range(-2, 3):  # FIXME my window is 2 before and 2 behind
-                if (curr + i in range(len(s))) and i != 0:  # in bounds and not the current word
-                    if s[curr] != 0 and s[curr + i] != 0:  # neither are padding
-                        temp = (s[curr], s[curr + i])  # a tuple of current word and context word
-                        bigTable.append(temp)
-    # once out here, bigTable has been made for everything.... time to break into training and validation
-    print("Encoding complete")  # fixme remove once done
-    # splitting into train and validation
+    # bigTable = list()
+    # lists for train and validation
     train_encoded = list()
     train_out = list()
     val_encoded = list()
     val_out = list()
 
-    val_indices = np.random.choice(list(range(len(bigTable))), int(len(bigTable) * .2 + .5), replace=False)
-    for i in range(len(bigTable)):
-        if i in val_indices:  # should be validation
-            val_encoded.append(bigTable[i][0])
-            val_out.append(bigTable[i][1])
-        else:  # should be in training
-            train_encoded.append(bigTable[i][0])
-            train_out.append(bigTable[i][1])
+    for s in encoded_sentences:  # for each sample sentence
+        for curr in range(len(s)):  # for each index in the sentence
+            for i in range(-2, 3):  # FIXME my window is 2 before and 2 behind
+                if (curr + i in range(len(s))) and i != 0:  # in bounds and not the current word
+                    if s[curr] != 0 and s[curr + i] != 0:  # neither are padding
+                        split = random.random()
+                        if split <= .2:  # validation  fixme something you can change
+                            val_encoded.append(s[curr])
+                            val_out.append(s[curr + i])
+                        else:  # training
+                            train_encoded.append(s[curr])
+                            train_out.append(s[curr + i])
+                        # temp = (s[curr], s[curr + i])  # a tuple of current word and context word
+                        # bigTable.append(temp)
+                    # if s[curr] == 0:  # we don't care about anything after this
+                    #     end = True
+                    #     break
+            if s[curr] == 0:  # we're done with this sentence
+                break
 
+    train_encoded = numpy.array(train_encoded)
+    train_out = numpy.array(train_out)
+    val_encoded = numpy.array(val_encoded)
+    val_out = numpy.array(val_out)
+
+    # once out here, bigTable has been made for everything.... time to break into training and validation
+
+
+    # val_indices = np.random.choice(list(range(len(bigTable))), int(len(bigTable) * .2 + .5), replace=False)
+    # for i in range(len(bigTable)):
+    #     if i in val_indices:  # should be validation
+    #         val_encoded.append(bigTable[i][0])
+    #         val_out.append(bigTable[i][1])
+    #     else:  # should be in training
+    #         train_encoded.append(bigTable[i][0])
+    #         train_out.append(bigTable[i][1])
+    # print("splitting done")
     # train_dataset = TensorDataset(torch.from_numpy(train_np_x))
 
         # # Build tokenizer based on training data.
@@ -93,7 +114,6 @@ def setup_dataloader(args):
     valDS = torch.utils.data.TensorDataset(torch.from_numpy(val_encoded), torch.from_numpy(val_out))
     train_loader = torch.utils.data.DataLoader(trainDS, shuffle=True, batch_size=args.batch_size)  # FIXME
     val_loader = torch.utils.data.DataLoader(valDS, shuffle=True, batch_size=args.batch_size)
-
     return train_loader, val_loader, index_to_vocab
 
 
@@ -124,7 +144,7 @@ def setup_optimizer(args, model):
     # Also initialize your optimizer.
     # ===================================================== #
     criterion = torch.nn.CrossEntropyLoss()  # FIXME
-    optimizer = optimizer = torch.optim.SGD(model.parameters(), lr=.05)  # FIXME what should the lr be?
+    optimizer = torch.optim.SGD(model.parameters(), lr=.05)  # FIXME what should the lr be?
     return criterion, optimizer
 
 
@@ -221,6 +241,7 @@ def main(args):
     criterion, optimizer = setup_optimizer(args, model)
 
     for epoch in range(args.num_epochs):
+        print("training 1 epoch")
         # train model for a single epoch
         print(f"Epoch {epoch}")
         train_loss, train_acc = train_epoch(
@@ -287,7 +308,7 @@ if __name__ == "__main__":
     # will be generated by the evaluation loop for these examples.
     # ===================================================== #
     parser.add_argument(
-        "--vocab_size", type=int, default=500, help="size of vocabulary"  # fixme was 3000
+        "--vocab_size", type=int, default=3000, help="size of vocabulary"
     )
     parser.add_argument(
         "--batch_size", type=int, default=32, help="size of each batch in loader"
@@ -301,7 +322,7 @@ if __name__ == "__main__":
         default='learned_word_vectors.txt'
     )
     parser.add_argument(
-        "--num_epochs", default=15, type=int, help="number of training epochs"  # fixme was 30
+        "--num_epochs", default=6, type=int, help="number of training epochs"  # fixme was 30
     )
     parser.add_argument(
         "--val_every",
