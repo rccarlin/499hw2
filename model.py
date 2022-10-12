@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
-class skipGram(nn.module):
-    def __init__(self, vocabSize):
+
+
+class skipGram(nn.Module):
+    def __init__(self, vocabSize, embedDim):
         super(skipGram,self).__init__()
         self.numWords = vocabSize
-        # self.hidDim
-        self.embeddingDim = 3  # fixme that is something u can choose
+        # self.hidDim fixme should I choose how many hidden dimensions?
+        self.embeddingDim = embedDim # fixme that is something u can choose
         self.bound = .5 / self.embeddingDim
         self.toHidden = (-2 * self.bound) * torch.rand(self.numWords, self.embeddingDim,
                                                        requires_grad=True) + self.bound
@@ -23,6 +23,12 @@ class skipGram(nn.module):
         oneHot[curr] = 1.0
         return oneHot
         # FIXME how do I ensure curr is the index of a word?
+
+    def forward(self, curr):
+        # know curr is a one hot
+        hid = curr.mm(self.toHidden)
+        out = hid.mm(self.toOut)
+        return out
 
 #
 #
