@@ -153,7 +153,7 @@ def train_epoch(
 
         # loss function is expecting batch * vocab
         # labels is not that, so you need to loop over labels and make it something loss will like
-        lossLabels = torch.zeros(args.batch_size, args.vocab_size)
+        lossLabels = torch.zeros(len(pred_logits), args.vocab_size)
         # populating lossLabels
         for l in range(len(labels)):  # okay so these are the max len 4 lists
             for n in labels[l]:
@@ -171,9 +171,9 @@ def train_epoch(
         epoch_loss += loss.item()
 
         # compute metrics
-        pred_labels.extend(pred_logits.cpu().numpy())  # so this is attaching what the model spits out, will do math
+        pred_labels.extend(pred_logits.cpu())  # so this is attaching what the model spits out, will do math
         # on it later
-        target_labels.extend(labels.cpu().numpy())
+        target_labels.extend(labels.cpu())  # originally target_labels.extend(labels.cpu().numpy())
 
     # acc = accuracy_score(pred_labels, target_labels)  # this prob won't be accurate but I don't super care
     epoch_loss /= len(loader)
