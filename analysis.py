@@ -18,7 +18,7 @@ def main():
         suggested_padding_len,
     )
 
-    # calculate num words ber book... oh shoot is that char....?
+    # calculate num words ber book
     numWords = 0
     book2words = dict()  # maps a book id to number of words in it
     words2books = dict()  # maps word to a dictionary of book to num occurrences
@@ -54,43 +54,16 @@ def main():
                     words2occ[currWord] = 1
 
 
-    for key in book2words:
-        print(key, ":", book2words[key] / numWords)
+    # for key in book2words:
+    #     print(key, ":", book2words[key] / numWords)
+    # for word in words2books:
+    #     print(word)
+    #     for book in words2books[word]:
+    #         print(book, words2books[word][book])
+    #     print("\n\n\n")
 
-    # now to get pairs of words and tie them to their respective book
-    # listFirst= list()
-    # listSecond = list()
-    # listBook = list()
-    # for s in range(len(encoded_sentences)):
-    #     for curr in range(len(encoded_sentences[s])):
-    #         for i in range(-2, 0):  # do i actually need to have (i have, and have i)
-    #             if curr + i in range(len(encoded_sentences[s])):
-    #                 sortedl = [encoded_sentences[s][curr], encoded_sentences[s][curr + i]]
-    #                 sortedl.sort()
-    #                 listFirst.append(sortedl[0])
-    #                 listSecond.append(sortedl[1])
-    #                 listBook.append(sentences[s][1])
-    # tempDict = {"Word_one": listFirst, "Word_two": listSecond, "BookID": listBook}
-    # df1 = pd.DataFrame(tempDict)
-    # df1.to_csv("wordPairs.csv")
-
-    # pairs2Books = dict()  # key = tuple, value = dictionary of book to occurrences
-    # for s in range(len(encoded_sentences)):
-    #     for curr in range(len(encoded_sentences[s])):
-    #         for i in range(-2, 3):
-    #             if (curr + i in range(len(encoded_sentences[s]))) and i != 0:
-    #                 temp = (encoded_sentences[s][curr], encoded_sentences[s][curr + i])
-    #                 if temp in pairs2Books:  # we've seen this pair before
-    #                     if sentences[s][1] in pairs2Books[temp]:  # weve seen this pair in this book
-    #                         pairs2Books[temp][str(sentences[s][1])] += 1
-    #                     else:  # we've seen this pair but not in this book
-    #                         pairs2Books[temp][str(sentences[s][1])] = 1
-    #                 else:  # we have never seen this pair before
-    #                     newDict = dict()
-    #                     newDict[str(sentences[s][1])] = 1
-    #                     pairs2Books[temp] = newDict
-
-    # f = open("")
-    # okay so I know the encoded sentences line up with the non encoded sentences
+    for word in words2occ:
+        print(word, words2occ[word])
+    myDF = pd.DataFrame()
 
 main()

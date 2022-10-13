@@ -62,54 +62,32 @@ def setup_dataloader(args):
     val_out = list()
 
     for s in encoded_sentences:  # for each sample sentence
-        for curr in range(len(s)):  # for each index in the sentence
+        for curr in range(len(s)):  # for each word in the sentence
+            if s[curr] == 0:  # no useful words after this
+                break
+            temp = list()
             for i in range(-2, 3):  # FIXME my window is 2 before and 2 behind
                 if (curr + i in range(len(s))) and i != 0:  # in bounds and not the current word
                     if s[curr] != 0 and s[curr + i] != 0:  # neither are padding
-                        split = random.random()
-                        if split <= .2:  # validation  fixme something you can change
-                            val_encoded.append(s[curr])
-                            val_out.append(s[curr + i])
-                        else:  # training
-                            train_encoded.append(s[curr])
-                            train_out.append(s[curr + i])
-                        # temp = (s[curr], s[curr + i])  # a tuple of current word and context word
-                        # bigTable.append(temp)
-                    # if s[curr] == 0:  # we don't care about anything after this
-                    #     end = True
-                    #     break
-            if s[curr] == 0:  # we're done with this sentence
-                break
+                        temp.append(s[curr + i])
+            while len(temp) < 4:  # fixme to be flexible, also added padding because it complained about ragged
+                temp.append(0)
+            # temp now is a list of context words
+            split = random.random()
+            if split <= .2:  # validation  fixme something you can change
+                val_encoded.append(s[curr])
+                val_out.append(np.array(temp))
+            else:  # training
+                train_encoded.append(s[curr])
+                train_out.append(np.array(temp))
 
-    train_encoded = numpy.array(train_encoded)
-    train_out = numpy.array(train_out)
-    val_encoded = numpy.array(val_encoded)
-    val_out = numpy.array(val_out)
+    train_encoded = np.array(train_encoded)
+    train_out = np.array(train_out)
+    val_encoded = np.array(val_encoded)
+    val_out = np.array(val_out)
 
     # once out here, bigTable has been made for everything.... time to break into training and validation
 
-
-    # val_indices = np.random.choice(list(range(len(bigTable))), int(len(bigTable) * .2 + .5), replace=False)
-    # for i in range(len(bigTable)):
-    #     if i in val_indices:  # should be validation
-    #         val_encoded.append(bigTable[i][0])
-    #         val_out.append(bigTable[i][1])
-    #     else:  # should be in training
-    #         train_encoded.append(bigTable[i][0])
-    #         train_out.append(bigTable[i][1])
-    # print("splitting done")
-    # train_dataset = TensorDataset(torch.from_numpy(train_np_x))
-
-        # # Build tokenizer based on training data.
-        # vocab_to_index, index_to_vocab, len_cutoff, cpb = build_tokenizer_table(train_lines, voc_k)
-        #
-        # # Encode the training and validation set inputs/outputs.
-        # train_np_x = encode_data(train_lines, vocab_to_index, len_cutoff)
-        # train_dataset = TensorDataset(torch.from_numpy(train_np_x))
-        # val_np_x = encode_data(val_lines, vocab_to_index, len_cutoff)
-        # val_dataset = TensorDataset(torch.from_numpy(val_np_x))
-        #
-        # # Create data loaders
     trainDS = torch.utils.data.TensorDataset(torch.from_numpy(train_encoded), torch.from_numpy(train_out))
     valDS = torch.utils.data.TensorDataset(torch.from_numpy(val_encoded), torch.from_numpy(val_out))
     train_loader = torch.utils.data.DataLoader(trainDS, shuffle=True, batch_size=args.batch_size)  # FIXME
@@ -126,8 +104,6 @@ def setup_model(args):
     # ================== TODO: CODE HERE ================== #
     # Task: Initialize your CBOW or Skip-Gram model.
     # ===================================================== #
-    # may need to return len of vocab 2 index from dataloader
-    # args.vocabSize?
     # is there an embedding dim?
     model = md.skipGram(args.vocab_size, 3)  # fixme can change embedding dim
     return model
@@ -143,7 +119,7 @@ def setup_optimizer(args, model):
     # Task: Initialize the loss function for predictions. 
     # Also initialize your optimizer.
     # ===================================================== #
-    criterion = torch.nn.CrossEntropyLoss()  # FIXME
+    criterion = torch.nn.BCEWithLogitsLoss()  # FIXME
     optimizer = torch.optim.SGD(model.parameters(), lr=.05)  # FIXME what should the lr be?
     return criterion, optimizer
 
@@ -172,12 +148,19 @@ def train_epoch(
 
         # calculate the loss and train accuracy and perform backprop
         # NOTE: feel free to change the parameters to the model forward pass here + outputs
-        inp = model.inputOneHot(inputs)
-        pred_logits = model(inp, labels)
+        inp = model.inputOneHot(inputs)  # fixme leftovers
+        pred_logits = model(inputs)  # pred_logits is batch by vocab... oh I knew that lmao
 
+        # loss function is expecting batch * vocab
+        # labels is not that, so you need to loop over labels and make it something loss will like
+        lossLabels = torch.zeros(args.batch_size, args.vocab_size)
+        # populating lossLabels
+        for l in range(len(labels)):  # okay so these are the max len 4 lists
+            for n in labels[l]:
+                lossLabels[l][n] = 1
         # calculate prediction loss
-        loss = criterion(pred_logits.squeeze(), labels)
-
+        # fixme, using my own array so it's the right size
+        loss = criterion(pred_logits.squeeze(), lossLabels)
         # step optimizer and compute gradients during training
         if training:
             optimizer.zero_grad()
@@ -188,14 +171,14 @@ def train_epoch(
         epoch_loss += loss.item()
 
         # compute metrics
-        preds = pred_logits.argmax(-1)
-        pred_labels.extend(preds.cpu().numpy())
+        pred_labels.extend(pred_logits.cpu().numpy())  # so this is attaching what the model spits out, will do math
+        # on it later
         target_labels.extend(labels.cpu().numpy())
 
-    acc = accuracy_score(pred_labels, target_labels)
+    # acc = accuracy_score(pred_labels, target_labels)  # this prob won't be accurate but I don't super care
     epoch_loss /= len(loader)
 
-    return epoch_loss, acc
+    return epoch_loss, pred_labels, target_labels
 
 
 def validate(args, model, loader, optimizer, criterion, device):
@@ -204,7 +187,7 @@ def validate(args, model, loader, optimizer, criterion, device):
 
     # don't compute gradients
     with torch.no_grad():
-        val_loss, val_acc = train_epoch(
+        val_loss, pred_labels, target_labels = train_epoch(
             args,
             model,
             loader,
@@ -213,6 +196,22 @@ def validate(args, model, loader, optimizer, criterion, device):
             device,
             training=False,
         )
+        # turning model output into actual word predictions
+        exAcc = 0
+        index = np.arange(args.vocab_size)  # so I don't loose track of what word these numbers correlate to
+        for p in range(len(pred_labels)):  # for each example, cos it extended instead of appended
+            together = sorted(zip(pred_labels[p], index), reverse=True)[:4]  # fixme change all 4s
+            temp = list()
+            for t in together:
+                temp.append(t[1])
+            inCommon = 0
+            for t in temp:
+                if t in target_labels[p]:
+                    inCommon += 1
+            exAcc += (inCommon / len(target_labels[p]))
+        # fixme issue: if I pick top window, that limits what I predict, and like what are the chances that
+        # target is just 4? or is that not an issue?
+        val_acc = exAcc / len(pred_labels)
 
     return val_loss, val_acc
 
@@ -224,7 +223,7 @@ def main(args):
     external_val_analogies = utils.read_analogies(args.analogies_fn)
 
     if args.downstream_eval:
-        word_vec_file = os.path.join(args.outputs_dir, args.word_vector_fn)
+        word_vec_file = os.path.join(args.output_dir, args.word_vector_fn)
         assert os.path.exists(word_vec_file), "need to train the word vecs first!"
         downstream_validation(word_vec_file, external_val_analogies)
         return
@@ -244,7 +243,7 @@ def main(args):
         print("training 1 epoch")
         # train model for a single epoch
         print(f"Epoch {epoch}")
-        train_loss, train_acc = train_epoch(
+        train_loss, p, t = train_epoch(
             args,
             model,
             loaders["train"],
@@ -253,7 +252,9 @@ def main(args):
             device,
         )
 
-        print(f"train loss : {train_loss} | train acc: {train_acc}")
+
+        #fixme, not returning that
+        # print(f"train loss : {train_loss} | train acc: {train_acc}")
 
         if epoch % args.val_every == 0:
             val_loss, val_acc = validate(
@@ -276,7 +277,7 @@ def main(args):
             # ===================================================== #
 
             # save word vectors
-            word_vec_file = os.path.join(args.outputs_dir, args.word_vector_fn)
+            word_vec_file = os.path.join(args.output_dir, args.word_vector_fn)
             print("saving word vec to ", word_vec_file)
             utils.save_word2vec_format(word_vec_file, model, i2v)
 
@@ -292,8 +293,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output_dir", type=str, help="where to save training outputs")
-    parser.add_argument("--data_dir", type=str, default="books",help="where the book dataset is stored")
+    parser.add_argument("--output_dir", type=str, default="outs", help="where to save training outputs")
+    parser.add_argument("--data_dir", type=str, default="books", help="where the book dataset is stored")
     parser.add_argument(
         "--downstream_eval",
         action="store_true",
