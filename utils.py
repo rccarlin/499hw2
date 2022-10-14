@@ -1,6 +1,7 @@
 import json
 import gensim
 import tqdm
+import torch
 
 
 def read_analogies(analogies_fn):
@@ -24,3 +25,19 @@ def save_word2vec_format(fname, model, i2v):
                     "%s %s\n" % (word, " ".join("%f" % val for val in row))
                 )
             )
+
+def get_device(force_cpu, status=True):
+    # if not force_cpu and torch.backends.mps.is_available():
+    # 	device = torch.device('mps')
+    # 	if status:
+    # 		print("Using MPS")
+    # elif not force_cpu and torch.cuda.is_available():
+    if not force_cpu and torch.cuda.is_available():
+        device = torch.device("cuda")
+        if status:
+            print("Using CUDA")
+    else:
+        device = torch.device("cpu")
+        if status:
+            print("Using CPU")
+    return device
