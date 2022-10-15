@@ -93,7 +93,7 @@ come up more often in vivo. Here are some of my favorite findings (in order from
   "wwwgutenbergorg" happens 5 times a book.
 - "Monte" is in roughly the top 300, but only appears in 3 books (174, 1184, 64317), so maybe The Count of Monte Cristo
   *was* too powerful for this data set
-- War and Peace singlehandedly got at lest one word on the list ("historians")
+- War and Peace singlehandedly got at least one word on the list ("historians")
 - "td," "tr," and "div" only appear in the code "books" so I guess they were long enough files to push nonsense into
   the model.
 - A word had to appear at least 89 times to be in the top 3000. Thankfully (and maybe surprisingly), I'd say most of
