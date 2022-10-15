@@ -87,12 +87,12 @@ come up more often in vivo. Here are some of my favorite findings (in order from
   performing gender analogies.
 - "gutenbergtm" should NOT be here if we wanted the dataset to be just the books. Even if this was a word, what would 
   the point of training on it be? Is this going to ever be an in vivo question? Is the context of this word ever going 
-  to  (it always happens 56 times)? I feel like this is a sign that some word vectors may be rigged if said word is a 
+  to change (it always happens 56 times)? I feel like this is a sign that some word vectors may be rigged if said word is a 
   part of the legal/ non-book stuff on each file. "Copyright" and "agreement" both appear 499 times, suggesting they 
   may only appear together and never apart (though I would have thought "agreement" could find other contexts). 
   "wwwgutenbergorg" happens 5 times a book.
 - "Monte" is in roughly the top 300, but only appears in 3 books (174, 1184, 64317), so maybe The Count of Monte Cristo
-  *was* too powerful
+  *was* too powerful for this data set
 - War and Peace singlehandedly got at lest one word on the list ("historians")
 - "td," "tr," and "div" only appear in the code "books" so I guess they were long enough files to push nonsense into
   the model.
@@ -100,34 +100,5 @@ come up more often in vivo. Here are some of my favorite findings (in order from
   those words are fairly common, so I am now less worried about the model than I had been before this exercise. 
 - A lot of the words that appear in only a few book are names. Names probably won't be too helpful in vivo, but it would
   probably be too much work to remove them.
-
-
-
-
-The whole output is in provided txt file, but I will point out highlights here:
-
-- the is most common word, but only has 4 occurrences in 2542, 2554, and 5200, and 6 in 4300. Checked these and sure
-enough, they aren't books. Since there are only 4 of these types of files, I'm not too worried about this "messing up"
-my training unless they somehow manage to push words into the 3000 word vocab that don't belong there.
-
-- Project is the second most common word... that isn't saying project wouldn't be in the vocab without Project Gutenberg,
-just I suspect a lot of these instances are not actually the books, in which case that may mess up the learned vector/
-neighbors for the word project (and probably gutenberg). And surprise surprise, gutenberg is next... certainly not a
-helpful word in the real word, but neither is "cruncher" but that's in the vocab as well. How much do I actually think
-these are messing the learning up tho? ebook...
-
-- finally seeing a word that deserves to be common, "of"
-
-- why is johnathan swift on here? oh those are actually separate! cos the johnathan swift book (1080) only has each 3
-times. but also, it's not that common, are these not in order????
-
-
-
-sentence[0] returned ['the project gutenberg ebook of a modest proposal by jonathan swift this ebook is for the use...
- ... of anyone anywhere in the united states and most other parts of the world at no cost and with almost no...
-  restrictions whatsoever', '1080']
-
-Right off the bat, this isn't a sentence, and also isn't that useful if we actually care about the content
-I wonder if the 30 times this happens will affect anything?
 
 
