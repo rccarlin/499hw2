@@ -56,14 +56,19 @@ def main():
 
     # for key in book2words:
     #     print(key, ":", book2words[key] / numWords)
-    # for word in words2books:
-    #     print(word)
-    #     for book in words2books[word]:
-    #         print(book, words2books[word][book])
-    #     print("\n\n\n")
+    for word in words2books:
+        print(word)
+        for book in words2books[word]:
+            print(book, words2books[word][book])
+        print("\n\n")
 
+
+    temp = list()
     for word in words2occ:
-        print(word, words2occ[word])
-    myDF = pd.DataFrame()
+        temp2 = (words2occ[word], word)
+        temp.append(temp2)
+    temp.sort()
+    for t in temp:
+        print(t)
 
 main()
